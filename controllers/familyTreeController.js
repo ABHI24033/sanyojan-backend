@@ -1215,94 +1215,127 @@ export const removeFamilyMember = async (req, res, next) => {
     // Remove relationship based on type
     switch (relationship) {
       case 'father':
-        currentProfile.father = null;
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $unset: { father: "" } }
+        );
         if (currentProfile.gender === 'male') {
-          memberProfile.sons = (memberProfile.sons || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { sons: currentUserId } }
           );
         } else {
-          memberProfile.daughters = (memberProfile.daughters || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { daughters: currentUserId } }
           );
         }
         break;
 
       case 'mother':
-        currentProfile.mother = null;
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $unset: { mother: "" } }
+        );
         if (currentProfile.gender === 'male') {
-          memberProfile.sons = (memberProfile.sons || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { sons: currentUserId } }
           );
         } else {
-          memberProfile.daughters = (memberProfile.daughters || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { daughters: currentUserId } }
           );
         }
         break;
 
       case 'brother':
-        currentProfile.brothers = (currentProfile.brothers || []).filter(
-          id => id.toString() !== memberId
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $pull: { brothers: memberId } }
         );
         if (currentProfile.gender === 'male') {
-          memberProfile.brothers = (memberProfile.brothers || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { brothers: currentUserId } }
           );
         } else {
-          memberProfile.sisters = (memberProfile.sisters || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { sisters: currentUserId } }
           );
         }
         break;
 
       case 'sister':
-        currentProfile.sisters = (currentProfile.sisters || []).filter(
-          id => id.toString() !== memberId
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $pull: { sisters: memberId } }
         );
         if (currentProfile.gender === 'male') {
-          memberProfile.brothers = (memberProfile.brothers || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { brothers: currentUserId } }
           );
         } else {
-          memberProfile.sisters = (memberProfile.sisters || []).filter(
-            id => id.toString() !== currentUserId.toString()
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $pull: { sisters: currentUserId } }
           );
         }
         break;
 
       case 'partner':
-        currentProfile.partner = null;
-        memberProfile.partner = null;
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $unset: { partner: "" } }
+        );
+        await Profile.findOneAndUpdate(
+          { user: memberId },
+          { $unset: { partner: "" } }
+        );
         break;
 
       case 'son':
-        currentProfile.sons = (currentProfile.sons || []).filter(
-          id => id.toString() !== memberId
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $pull: { sons: memberId } }
         );
         if (currentProfile.gender === 'male') {
-          memberProfile.father = null;
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $unset: { father: "" } }
+          );
         } else {
-          memberProfile.mother = null;
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $unset: { mother: "" } }
+          );
         }
         break;
 
       case 'daughter':
-        currentProfile.daughters = (currentProfile.daughters || []).filter(
-          id => id.toString() !== memberId
+        await Profile.findOneAndUpdate(
+          { user: currentUserId },
+          { $pull: { daughters: memberId } }
         );
         if (currentProfile.gender === 'male') {
-          memberProfile.father = null;
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $unset: { father: "" } }
+          );
         } else {
-          memberProfile.mother = null;
+          await Profile.findOneAndUpdate(
+            { user: memberId },
+            { $unset: { mother: "" } }
+          );
         }
         break;
 
       default:
         return res.status(400).json({ message: "Invalid relationship type" });
     }
-
-    await currentProfile.save();
-    await memberProfile.save();
 
     return res.status(200).json({
       message: "Family member relationship removed successfully"
@@ -1355,72 +1388,79 @@ export const deleteFamilyMember = async (req, res, next) => {
 
     // A. Remove from Parents (Father/Mother)
     if (memberProfile.father) {
-      const fatherProfile = await Profile.findOne({ user: memberProfile.father });
-      if (fatherProfile) {
-        fatherProfile.sons = fatherProfile.sons?.filter(id => id.toString() !== memberId);
-        fatherProfile.daughters = fatherProfile.daughters?.filter(id => id.toString() !== memberId);
-        await fatherProfile.save();
-      }
+      await Profile.findOneAndUpdate(
+        { user: memberProfile.father },
+        { 
+          $pull: { 
+            sons: memberId, 
+            daughters: memberId 
+          }
+        }
+      );
     }
     if (memberProfile.mother) {
-      const motherProfile = await Profile.findOne({ user: memberProfile.mother });
-      if (motherProfile) {
-        motherProfile.sons = motherProfile.sons?.filter(id => id.toString() !== memberId);
-        motherProfile.daughters = motherProfile.daughters?.filter(id => id.toString() !== memberId);
-        await motherProfile.save();
-      }
+      await Profile.findOneAndUpdate(
+        { user: memberProfile.mother },
+        { 
+          $pull: { 
+            sons: memberId, 
+            daughters: memberId 
+          }
+        }
+      );
     }
 
     // B. Remove from Partner
     if (memberProfile.partner) {
-      const partnerProfile = await Profile.findOne({ user: memberProfile.partner });
-      if (partnerProfile) {
-        partnerProfile.partner = null;
-        await partnerProfile.save();
-      }
+      await Profile.findOneAndUpdate(
+        { user: memberProfile.partner },
+        { $unset: { partner: "" } }
+      );
     }
 
-    // C. Remove from Siblings (Brothers/Sisters)
+    // C. Remove from Siblings (Brothers/Sisters) - using atomic updates
     if (memberProfile.brothers && memberProfile.brothers.length > 0) {
-      for (const brotherId of memberProfile.brothers) {
-        const brotherProfile = await Profile.findOne({ user: brotherId });
-        if (brotherProfile) {
-          brotherProfile.brothers = brotherProfile.brothers?.filter(id => id.toString() !== memberId);
-          brotherProfile.sisters = brotherProfile.sisters?.filter(id => id.toString() !== memberId);
-          await brotherProfile.save();
+      await Profile.updateMany(
+        { user: { $in: memberProfile.brothers } },
+        { 
+          $pull: { 
+            brothers: memberId, 
+            sisters: memberId 
+          }
         }
-      }
+      );
     }
     if (memberProfile.sisters && memberProfile.sisters.length > 0) {
-      for (const sisterId of memberProfile.sisters) {
-        const sisterProfile = await Profile.findOne({ user: sisterId });
-        if (sisterProfile) {
-          sisterProfile.brothers = sisterProfile.brothers?.filter(id => id.toString() !== memberId);
-          sisterProfile.sisters = sisterProfile.sisters?.filter(id => id.toString() !== memberId);
-          await sisterProfile.save();
+      await Profile.updateMany(
+        { user: { $in: memberProfile.sisters } },
+        { 
+          $pull: { 
+            brothers: memberId, 
+            sisters: memberId 
+          }
         }
-      }
+      );
     }
 
-    // D. Update Children (Set their father/mother to null)
-    if (memberProfile.sons && memberProfile.sons.length > 0) {
-      for (const sonId of memberProfile.sons) {
-        const sonProfile = await Profile.findOne({ user: sonId });
-        if (sonProfile) {
-          if (sonProfile.father?.toString() === memberId) sonProfile.father = null;
-          if (sonProfile.mother?.toString() === memberId) sonProfile.mother = null;
-          await sonProfile.save();
-        }
-      }
-    }
-    if (memberProfile.daughters && memberProfile.daughters.length > 0) {
-      for (const daughterId of memberProfile.daughters) {
-        const daughterProfile = await Profile.findOne({ user: daughterId });
-        if (daughterProfile) {
-          if (daughterProfile.father?.toString() === memberId) daughterProfile.father = null;
-          if (daughterProfile.mother?.toString() === memberId) daughterProfile.mother = null;
-          await daughterProfile.save();
-        }
+    // D. Update Children (Set their father/mother to null) - using atomic updates
+    const childrenIds = [
+      ...(memberProfile.sons || []),
+      ...(memberProfile.daughters || [])
+    ];
+    
+    if (childrenIds.length > 0) {
+      // Remove father reference if deleted member was male
+      if (memberProfile.gender === 'male') {
+        await Profile.updateMany(
+          { user: { $in: childrenIds } },
+          { $unset: { father: "" } }
+        );
+      } else {
+        // Remove mother reference if deleted member was female
+        await Profile.updateMany(
+          { user: { $in: childrenIds } },
+          { $unset: { mother: "" } }
+        );
       }
     }
 

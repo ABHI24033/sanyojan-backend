@@ -745,7 +745,7 @@ export const getUpcomingBirthdaysAndAnniversaries = async (req, res, next) => {
 
         const daysUntil = getDaysUntil(month, day);
 
-        if (daysUntil >= -1 && daysUntil <= 30) { // Changed to 30 days
+        if (daysUntil >= 0 && daysUntil <= 3) { // Only show within 3 days
           birthdays.push({
             userId: profile.user._id,
             name: `${profile.user.firstname} ${profile.user.lastname}`,
@@ -765,7 +765,7 @@ export const getUpcomingBirthdaysAndAnniversaries = async (req, res, next) => {
 
         const daysUntil = getDaysUntil(month, day);
 
-        if (daysUntil >= -1 && daysUntil <= 30) { // Changed to 30 days
+        if (daysUntil >= 0 && daysUntil <= 3) { // Only show within 3 days
           anniversaries.push({
             userId: profile.user._id,
             name: `${profile.user.firstname} ${profile.user.lastname}`,
@@ -785,7 +785,7 @@ export const getUpcomingBirthdaysAndAnniversaries = async (req, res, next) => {
 
         const daysUntil = getDaysUntil(month, day);
 
-        if (daysUntil >= -1 && daysUntil <= 30) { // Show within 30 days
+        if (daysUntil >= 0 && daysUntil <= 3) { // Only show within 3 days
           deathAnniversaries.push({
             userId: profile.user._id,
             name: `${profile.user.firstname} ${profile.user.lastname}`,

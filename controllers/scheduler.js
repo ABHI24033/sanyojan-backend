@@ -151,17 +151,27 @@ const getFamilyMembersForNotifications = async (treeId, excludeUserId) => {
     }
 };
 
-// Send birthday reminders (1 day before)
+// Send birthday reminders (only within 3 days before birthday)
 const checkAndSendBirthdayReminders = async () => {
     try {
         console.log("Checking birthday reminders...");
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-        const month = tomorrow.getMonth();
-        const day = tomorrow.getDate();
+        // Get dates for next 3 days (1, 2, and 3 days from now)
+        const upcomingDates = [];
+        for (let i = 1; i <= 3; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            upcomingDates.push({
+                daysUntil: i,
+                month: date.getMonth(),
+                day: date.getDate(),
+                year: date.getFullYear()
+            });
+        }
         
-        // Find profiles with birthdays tomorrow
+        // Find profiles with birthdays in the next 3 days
         const profiles = await Profile.find({
             dob: { $exists: true, $ne: null },
             dateOfDeath: { $exists: false } // Only for living members
@@ -171,8 +181,14 @@ const checkAndSendBirthdayReminders = async () => {
             if (!profile.dob || !profile.user) continue;
             
             const dob = new Date(profile.dob);
-            if (dob.getMonth() === month && dob.getDate() === day) {
-                const age = tomorrow.getFullYear() - dob.getFullYear();
+            const dobMonth = dob.getMonth();
+            const dobDay = dob.getDate();
+            
+            // Check if birthday matches any of the upcoming 3 days
+            const matchingDate = upcomingDates.find(d => d.month === dobMonth && d.day === dobDay);
+            
+            if (matchingDate) {
+                const age = matchingDate.year - dob.getFullYear();
                 const familyMembers = await getFamilyMembersForNotifications(profile.treeId, profile.user._id);
                 
                 // Notify family members
@@ -182,22 +198,26 @@ const checkAndSendBirthdayReminders = async () => {
                         recipient: member.userId,
                         treeId: profile.treeId,
                         type: "new_member",
-                        message: `Tomorrow is ${profile.user.firstname}'s birthday! They will be turning ${age}.`,
+                        message: matchingDate.daysUntil === 1 
+                            ? `Tomorrow is ${profile.user.firstname}'s birthday! They will be turning ${age}.`
+                            : `${profile.user.firstname}'s birthday is in ${matchingDate.daysUntil} days! They will be turning ${age}.`,
                         referenceId: profile.user._id
                     });
                 }
                 
-                // Notify the birthday person themselves
-                await Notification.create({
-                    sender: profile.user._id,
-                    recipient: profile.user._id,
-                    treeId: profile.treeId,
-                    type: "new_member",
-                    message: `Tomorrow is your birthday! You will be turning ${age}. Wishing you a wonderful year ahead!`,
-                    referenceId: profile.user._id
-                });
+                // Notify the birthday person themselves (only on day 1 - tomorrow)
+                if (matchingDate.daysUntil === 1) {
+                    await Notification.create({
+                        sender: profile.user._id,
+                        recipient: profile.user._id,
+                        treeId: profile.treeId,
+                        type: "new_member",
+                        message: `Tomorrow is your birthday! You will be turning ${age}. Wishing you a wonderful year ahead!`,
+                        referenceId: profile.user._id
+                    });
+                }
                 
-                console.log(`Birthday reminder sent for ${profile.user.firstname}`);
+                console.log(`Birthday reminder sent for ${profile.user.firstname} (${matchingDate.daysUntil} days away)`);
             }
         }
     } catch (error) {
@@ -205,17 +225,27 @@ const checkAndSendBirthdayReminders = async () => {
     }
 };
 
-// Send marriage anniversary reminders (1 day before)
+// Send marriage anniversary reminders (only within 3 days before anniversary)
 const checkAndSendAnniversaryReminders = async () => {
     try {
         console.log("Checking marriage anniversary reminders...");
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-        const month = tomorrow.getMonth();
-        const day = tomorrow.getDate();
+        // Get dates for next 3 days (1, 2, and 3 days from now)
+        const upcomingDates = [];
+        for (let i = 1; i <= 3; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            upcomingDates.push({
+                daysUntil: i,
+                month: date.getMonth(),
+                day: date.getDate(),
+                year: date.getFullYear()
+            });
+        }
         
-        // Find profiles with anniversaries tomorrow
+        // Find profiles with anniversaries in the next 3 days
         const profiles = await Profile.find({
             marriageDate: { $exists: true, $ne: null },
             dateOfDeath: { $exists: false } // Only for living members
@@ -225,8 +255,14 @@ const checkAndSendAnniversaryReminders = async () => {
             if (!profile.marriageDate || !profile.user) continue;
             
             const marriageDate = new Date(profile.marriageDate);
-            if (marriageDate.getMonth() === month && marriageDate.getDate() === day) {
-                const years = tomorrow.getFullYear() - marriageDate.getFullYear();
+            const annivMonth = marriageDate.getMonth();
+            const annivDay = marriageDate.getDate();
+            
+            // Check if anniversary matches any of the upcoming 3 days
+            const matchingDate = upcomingDates.find(d => d.month === annivMonth && d.day === annivDay);
+            
+            if (matchingDate) {
+                const years = matchingDate.year - marriageDate.getFullYear();
                 const familyMembers = await getFamilyMembersForNotifications(profile.treeId, profile.user._id);
                 
                 // Notify family members
@@ -236,22 +272,26 @@ const checkAndSendAnniversaryReminders = async () => {
                         recipient: member.userId,
                         treeId: profile.treeId,
                         type: "new_member",
-                        message: `Tomorrow is ${profile.user.firstname}'s ${years}th marriage anniversary!`,
+                        message: matchingDate.daysUntil === 1
+                            ? `Tomorrow is ${profile.user.firstname}'s ${years}th marriage anniversary!`
+                            : `${profile.user.firstname}'s ${years}th marriage anniversary is in ${matchingDate.daysUntil} days!`,
                         referenceId: profile.user._id
                     });
                 }
                 
-                // Notify the couple
-                await Notification.create({
-                    sender: profile.user._id,
-                    recipient: profile.user._id,
-                    treeId: profile.treeId,
-                    type: "new_member",
-                    message: `Tomorrow is your ${years}th marriage anniversary! Wishing you many more years of happiness!`,
-                    referenceId: profile.user._id
-                });
+                // Notify the couple (only on day 1 - tomorrow)
+                if (matchingDate.daysUntil === 1) {
+                    await Notification.create({
+                        sender: profile.user._id,
+                        recipient: profile.user._id,
+                        treeId: profile.treeId,
+                        type: "new_member",
+                        message: `Tomorrow is your ${years}th marriage anniversary! Wishing you many more years of happiness!`,
+                        referenceId: profile.user._id
+                    });
+                }
                 
-                console.log(`Anniversary reminder sent for ${profile.user.firstname}`);
+                console.log(`Anniversary reminder sent for ${profile.user.firstname} (${matchingDate.daysUntil} days away)`);
             }
         }
     } catch (error) {
@@ -259,17 +299,27 @@ const checkAndSendAnniversaryReminders = async () => {
     }
 };
 
-// Send death anniversary reminders (1 day before)
+// Send death anniversary reminders (only within 3 days before anniversary)
 const checkAndSendDeathAnniversaryReminders = async () => {
     try {
         console.log("Checking death anniversary reminders...");
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
-        const month = tomorrow.getMonth();
-        const day = tomorrow.getDate();
+        // Get dates for next 3 days (1, 2, and 3 days from now)
+        const upcomingDates = [];
+        for (let i = 1; i <= 3; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            upcomingDates.push({
+                daysUntil: i,
+                month: date.getMonth(),
+                day: date.getDate(),
+                year: date.getFullYear()
+            });
+        }
         
-        // Find profiles with death anniversaries tomorrow
+        // Find profiles with death anniversaries in the next 3 days
         const profiles = await Profile.find({
             dateOfDeath: { $exists: true, $ne: null }
         }).populate('user', 'firstname lastname');
@@ -278,8 +328,14 @@ const checkAndSendDeathAnniversaryReminders = async () => {
             if (!profile.dateOfDeath || !profile.user) continue;
             
             const deathDate = new Date(profile.dateOfDeath);
-            if (deathDate.getMonth() === month && deathDate.getDate() === day) {
-                const years = tomorrow.getFullYear() - deathDate.getFullYear();
+            const deathAnnivMonth = deathDate.getMonth();
+            const deathAnnivDay = deathDate.getDate();
+            
+            // Check if death anniversary matches any of the upcoming 3 days
+            const matchingDate = upcomingDates.find(d => d.month === deathAnnivMonth && d.day === deathAnnivDay);
+            
+            if (matchingDate) {
+                const years = matchingDate.year - deathDate.getFullYear();
                 const familyMembers = await getFamilyMembersForNotifications(profile.treeId, profile.user._id);
                 
                 // Notify family members about death anniversary
@@ -289,12 +345,14 @@ const checkAndSendDeathAnniversaryReminders = async () => {
                         recipient: member.userId,
                         treeId: profile.treeId,
                         type: "new_member",
-                        message: `Tomorrow marks ${years} years since ${profile.user.firstname} passed away. Let us remember them with love.`,
+                        message: matchingDate.daysUntil === 1
+                            ? `Tomorrow marks ${years} years since ${profile.user.firstname} passed away. Let us remember them with love.`
+                            : `${matchingDate.daysUntil} days until ${profile.user.firstname}'s ${years}th death anniversary. Let us remember them with love.`,
                         referenceId: profile.user._id
                     });
                 }
                 
-                console.log(`Death anniversary reminder sent for ${profile.user.firstname}`);
+                console.log(`Death anniversary reminder sent for ${profile.user.firstname} (${matchingDate.daysUntil} days away)`);
             }
         }
     } catch (error) {
