@@ -283,6 +283,7 @@ export const createEvent = async (req, res) => {
         const adminName = creator
           ? `${creator.firstname} ${creator.lastname || ''}`.trim()
           : 'Host';
+          console.log("adminName", adminName);
         const eventDataPayload = {
           eventName: eventName,
           eventDate: eventDateFormatted,
@@ -1169,3 +1170,4 @@ export const getEventAttendance = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
