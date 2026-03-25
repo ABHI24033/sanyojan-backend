@@ -521,13 +521,17 @@ export const getMyEvents = async (req, res) => {
     const eventsWithStats = events.map(event => {
       const internal = event.guests || [];
       const external = event.externalGuests || [];
+      
+      // Exclude event creator from internal guests count
+      const creatorId = event.createdBy?.toString();
+      const filteredInternal = internal.filter(g => g.user?.toString() !== creatorId);
 
       const stats = {
-        total: internal.length + external.length,
-        accepted: internal.filter(g => g.status === 'accepted').length + external.filter(g => g.status === 'accepted').length,
-        rejected: internal.filter(g => g.status === 'rejected').length + external.filter(g => g.status === 'rejected').length,
-        maybe: internal.filter(g => g.status === 'maybe').length + external.filter(g => g.status === 'maybe').length,
-        pending: internal.filter(g => g.status === 'pending').length + external.filter(g => g.status === 'pending').length,
+        total: filteredInternal.length + external.length,
+        accepted: filteredInternal.filter(g => g.status === 'accepted').length + external.filter(g => g.status === 'accepted').length,
+        rejected: filteredInternal.filter(g => g.status === 'rejected').length + external.filter(g => g.status === 'rejected').length,
+        maybe: filteredInternal.filter(g => g.status === 'maybe').length + external.filter(g => g.status === 'maybe').length,
+        pending: filteredInternal.filter(g => g.status === 'pending').length + external.filter(g => g.status === 'pending').length,
       };
       return { ...event, guestStats: stats };
     });
@@ -759,15 +763,19 @@ export const getEventGuestList = async (req, res) => {
     }
 
     // 6. Stats (Calculate on FULL list)
+    // Exclude event creator from total count
+    const creatorId = event.createdBy?.toString();
+    const filteredAllGuests = allGuests.filter(g => g._id !== creatorId);
+    
     const stats = {
-      totalGuests: allGuests.length,
-      totalAttendees: allGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.totalAttendees || 0) : 0), 0),
-      vegAttendees: allGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.vegAttendees || 0) : 0), 0),
-      nonVegAttendees: allGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.nonVegAttendees || 0) : 0), 0),
-      accepted: allGuests.filter(g => g.currentStatus === 'accepted').length,
-      pending: allGuests.filter(g => g.currentStatus === 'pending').length,
-      rejected: allGuests.filter(g => g.currentStatus === 'rejected').length,
-      maybe: allGuests.filter(g => g.currentStatus === 'maybe').length,
+      totalGuests: filteredAllGuests.length,
+      totalAttendees: filteredAllGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.totalAttendees || 0) : 0), 0),
+      vegAttendees: filteredAllGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.vegAttendees || 0) : 0), 0),
+      nonVegAttendees: filteredAllGuests.reduce((acc, g) => acc + (['accepted', 'maybe'].includes(g.currentStatus) ? (g.nonVegAttendees || 0) : 0), 0),
+      accepted: filteredAllGuests.filter(g => g.currentStatus === 'accepted').length,
+      pending: filteredAllGuests.filter(g => g.currentStatus === 'pending').length,
+      rejected: filteredAllGuests.filter(g => g.currentStatus === 'rejected').length,
+      maybe: filteredAllGuests.filter(g => g.currentStatus === 'maybe').length,
     };
 
     // 7. Pagination
@@ -1048,19 +1056,22 @@ export const getReceivedInvitations = async (req, res) => {
       .lean();
 
     // Post-process to attach "status" and filter if needed
-    // Post-process to attach "status" and filter if needed
     const invitedEvents = events.map(event => {
       const myGuestEntry = event.guests.find(g => g.user.toString() === userId);
 
       const internal = event.guests || [];
       const external = event.externalGuests || [];
+      
+      // Exclude event creator from internal guests count
+      const creatorId = event.createdBy?.toString();
+      const filteredInternal = internal.filter(g => g.user?.toString() !== creatorId);
 
       const guestStats = {
-        total: internal.length + external.length,
-        accepted: internal.filter(g => g.status === 'accepted').length + external.filter(g => g.status === 'accepted').length,
-        rejected: internal.filter(g => g.status === 'rejected').length + external.filter(g => g.status === 'rejected').length,
-        maybe: internal.filter(g => g.status === 'maybe').length + external.filter(g => g.status === 'maybe').length,
-        pending: internal.filter(g => g.status === 'pending').length + external.filter(g => g.status === 'pending').length,
+        total: filteredInternal.length + external.length,
+        accepted: filteredInternal.filter(g => g.status === 'accepted').length + external.filter(g => g.status === 'accepted').length,
+        rejected: filteredInternal.filter(g => g.status === 'rejected').length + external.filter(g => g.status === 'rejected').length,
+        maybe: filteredInternal.filter(g => g.status === 'maybe').length + external.filter(g => g.status === 'maybe').length,
+        pending: filteredInternal.filter(g => g.status === 'pending').length + external.filter(g => g.status === 'pending').length,
       };
 
       return {

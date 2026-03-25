@@ -76,7 +76,8 @@ export const sendWhatsAppOtp = async (mobile, otp) => {
 export const sendWhatsAppEventInviteWithFamily = async (recipient, eventData) => {
     try {
         const apiKey = process.env.WHATSAPP_API_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NDE4YjI0NTliYTM2NGE1NDQ0ZTNhZCIsIm5hbWUiOiJTYW55b2phbiIsImFwcE5hbWUiOiJBaVNlbnN5IiwiY2xpZW50SWQiOiI2OTQxOGIyNDU5YmEzNjRhNTQ0NGUzYTgiLCJhY3RpdmVQbGFuIjoiRlJFRV9GT1JFVkVSIiwiaWF0IjoxNzY1OTAzMTQwfQ.CQmxvkYUH7xPxcnXXa2cOUyqMYMxHQ44wk1pFA6QsPI";
-        const campaignName = process.env.AISENSY_CAMPAIGN_WITH_FAMILY || "sanyojan_event_family";
+        // const campaignName = process.env.AISENSY_CAMPAIGN_WITH_FAMILY || "sanyojan_event_family";
+        const campaignName = process.env.AISENSY_CAMPAIGN_WITH_FAMILY || "sanyojan_event_family_new";
 
         const phoneWithCountryCode = `${recipient.country_code ? recipient.country_code.replace('+', '') : '91'}${recipient.phone}`;
         const guestName = recipient.name || 'user';
