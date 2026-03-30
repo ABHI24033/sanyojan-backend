@@ -3,7 +3,7 @@ import Post from "../models/Post.js";
 import User from "../models/User.js";
 import Poll from "../models/Poll.js";
 import Profile from "../models/Profile.js";
-import { deleteImageFromCloudinary, extractPublicIdFromUrl, uploadImageToCloudinary } from "../utils/cloudinaryUpload.js";
+import { deleteImageFromCloudinary, extractPublicIdFromUrl, uploadImageToCloudinary, uploadImageOriginalSize } from "../utils/cloudinaryUpload.js";
 import { getUserId } from "../utils/common.js";
 import Notification from "../models/Notification.js";
 
@@ -33,7 +33,7 @@ export const createPost = async (req, res) => {
     if (req.files && req.files.length > 0) {
       try {
         for (const file of req.files) {
-          const uploadResult = await uploadImageToCloudinary(file.buffer);
+          const uploadResult = await uploadImageOriginalSize(file.buffer, "familytree/posts");
           uploadedImages.push(uploadResult.url);
         }
       } catch (err) {
@@ -787,7 +787,7 @@ export const editPost = async (req, res) => {
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const uploaded = await uploadImageToCloudinary(file.buffer);
+        const uploaded = await uploadImageOriginalSize(file.buffer, "familytree/posts");
         newImages.push(uploaded?.url);
       }
     }
