@@ -221,12 +221,12 @@ profileSchema.pre("save", function (next) {
 });
 
 // ---- Pre-validate: burialPlace required if dateOfDeath is set ----
-profileSchema.pre("validate", function (next) {
-  if (this.dateOfDeath && !this.burialPlace) {
-    this.invalidate("burialPlace", "Burial place is required when date of death is provided");
-  }
-  next();
-});
+// profileSchema.pre("validate", function (next) {
+//   if (this.dateOfDeath && !this.burialPlace) {
+//     this.invalidate("burialPlace", "Burial place is required when date of death is provided");
+//   }
+//   next();
+// });
 
 // ---- Virtual: normalized relationships object ----
 // This matches the "correct style" response: { fatherId, motherId, partnerId, childrenIds }
