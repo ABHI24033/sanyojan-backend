@@ -81,6 +81,9 @@ export const sendOtp = async (req, res) => {
       existingUser.is_verified = false;
       await existingUser.save();
     } else {
+      // Check if this is the first user signup (not member creation)
+      const adminExists = await User.exists({ isAdmin: true, is_deleted: false });
+      
       // Create new user with is_verified = 0
       await User.create({
         firstname: firstname.trim(),
@@ -89,6 +92,7 @@ export const sendOtp = async (req, res) => {
         phone: phoneValidation.phone,
         password: hashedPassword,
         is_verified: false,
+        isAdmin: true, // First signup user becomes admin
         otp: otp,
         otpExpires: otpExpires,
         ipAddress: clientIp, // Capture IP on registration
@@ -172,12 +176,6 @@ export const verifyOtp = async (req, res) => {
 
     // OTP verified - update user
     user.is_verified = true;
-
-    // Role bootstrap: first verified registration becomes main Admin.
-    const adminExists = await User.exists({ isAdmin: true, is_deleted: false });
-    if (!adminExists) {
-      user.isAdmin = true;
-    }
 
     await clearOtp(user);
 

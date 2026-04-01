@@ -287,14 +287,58 @@ export const rsvpToEventPublic = async (req, res) => {
             return res.status(404).json({ success: false, message: "Event not found" });
         }
 
-        // 1. Check if duplicate (Already Registered)
-        const existingGuest = await EventGuest.findOne({ event: eventId, mobile: mobile });
-        if (existingGuest) {
-            return res.status(409).json({ success: false, message: "You have already responded to this event with this mobile number." });
+        // 1. Check if existing external RSVP exists (mobile is used as identifier for public rsvp)
+        let guestEntry = await EventGuest.findOne({ event: eventId, mobile: mobile });
+        if (guestEntry) {
+            // Update existing RSVP, allowing users to change status and attendee counts
+            guestEntry.status = status;
+            guestEntry.foodPreference = foodPreference;
+            guestEntry.totalAttendees = totalAttendees || 1;
+            guestEntry.vegAttendees = vegAttendees || 0;
+            guestEntry.nonVegAttendees = nonVegAttendees || 0;
+            guestEntry.city = city || guestEntry.city;
+            guestEntry.name = name || guestEntry.name;
+            guestEntry.respondedAt = new Date();
+            await guestEntry.save();
+
+            // Sync public guest entry on Event document
+            const extIndex = event.externalGuests.findIndex(g => g.mobile === mobile);
+            if (extIndex !== -1) {
+                const externalGuest = event.externalGuests[extIndex];
+                externalGuest.name = guestEntry.name;
+                externalGuest.mobile = mobile; // ensure required field is preserved
+                externalGuest.status = guestEntry.status;
+                externalGuest.foodPreference = guestEntry.foodPreference;
+                externalGuest.totalAttendees = guestEntry.totalAttendees;
+                externalGuest.vegAttendees = guestEntry.vegAttendees;
+                externalGuest.nonVegAttendees = guestEntry.nonVegAttendees;
+                externalGuest.city = guestEntry.city;
+                externalGuest.respondedAt = guestEntry.respondedAt;
+            } else {
+                event.externalGuests.push({
+                    name: guestEntry.name,
+                    mobile,
+                    status: guestEntry.status,
+                    foodPreference: guestEntry.foodPreference,
+                    totalAttendees: guestEntry.totalAttendees,
+                    vegAttendees: guestEntry.vegAttendees,
+                    nonVegAttendees: guestEntry.nonVegAttendees,
+                    city: guestEntry.city,
+                    respondedAt: guestEntry.respondedAt
+                });
+            }
+
+            await event.save();
+
+            return res.status(200).json({
+                success: true,
+                message: "RSVP updated successfully",
+                data: guestEntry
+            });
         }
 
         // 2. Create Guest Entry (EventGuest)
-        const guestEntry = await EventGuest.create({
+        guestEntry = await EventGuest.create({
             event: eventId,
             mobile,
             name,
