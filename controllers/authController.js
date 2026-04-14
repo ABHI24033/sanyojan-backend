@@ -106,10 +106,7 @@ export const sendOtp = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully",
-      // In production, don't send OTP in response
-      // For development/testing only:
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      message: "OTP sent successfully"
     });
   } catch (error) {
     console.error("Send OTP Error:", error);
@@ -184,7 +181,7 @@ export const verifyOtp = async (req, res) => {
     const refreshToken = generateRefreshToken(String(user._id));
 
     // Set tokens in HTTP-only cookies
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -260,10 +257,7 @@ export const resendOtp = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "OTP resent successfully",
-      // In production, don't send OTP in response
-      // For development/testing only:
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      message: "OTP resent successfully"
     });
   } catch (error) {
     console.error("Resend OTP Error:", error);
@@ -431,10 +425,7 @@ export const sendOtpForLogin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully for login",
-      // In production, don't send OTP in response
-      // For development/testing only:
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      message: "OTP sent successfully for login"
     });
   } catch (error) {
     console.error("Send OTP For Login Error:", error);
@@ -502,7 +493,7 @@ export const verifyOtpForLogin = async (req, res) => {
     const refreshToken = generateRefreshToken(String(user._id));
 
     // Set tokens in HTTP-only cookies
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -587,10 +578,7 @@ export const resendOtpForLogin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "OTP resent successfully for login",
-      // In production, don't send OTP in response
-      // For development/testing only:
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      message: "OTP resent successfully for login"
     });
   } catch (error) {
     console.error("Resend OTP For Login Error:", error);
@@ -660,10 +648,7 @@ export const sendOtpForForgotPassword = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully for password reset",
-      // In production, don't send OTP in response
-      // For development/testing only:
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      message: "OTP sent successfully for password reset"
     });
   } catch (error) {
     console.error("Send OTP For Forgot Password Error:", error);
@@ -830,7 +815,7 @@ export const resetPassword = async (req, res) => {
     const refreshToken = generateRefreshToken(String(user._id));
 
     // Set tokens in HTTP-only cookies
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -869,18 +854,10 @@ export const refreshToken = async (req, res) => {
     }
 
     const accessToken = generateAccessToken(String(user._id));
+    const nextRefreshToken = generateRefreshToken(String(user._id));
 
-    // Use same cookie settings as setAuthCookies for consistency
-    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
-    const sameSiteValue = isProduction ? "None" : "Lax";
-    const secureValue = isProduction;
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: secureValue,
-      sameSite: sameSiteValue,
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
+    // Rotate refresh token so active users stay signed in for longer.
+    setAuthCookies(res, accessToken, nextRefreshToken, req);
 
     return res.status(200).json({
       success: true,
@@ -958,7 +935,18 @@ export const getCurrentUser = async (req, res) => {
 // ------------------- LOGOUT USER -------------------
 export const logoutUser = (req, res) => {
   try {
-    clearAuthCookies(res);
+    const authHeaderToken = req.headers.authorization?.split(" ")[1];
+    const cookieToken = req.cookies?.accessToken;
+    const tokenToInvalidate = authHeaderToken || cookieToken;
+
+    if (tokenToInvalidate) {
+      if (!req.app.locals.blacklist) {
+        req.app.locals.blacklist = new Set();
+      }
+      req.app.locals.blacklist.add(tokenToInvalidate);
+    }
+
+    clearAuthCookies(res, req);
 
     return res.status(200).json({
       success: true,
@@ -1085,7 +1073,7 @@ export const updatePasswordAfterFirstLogin = async (req, res) => {
     const refreshToken = generateRefreshToken(String(user._id));
 
     // Set tokens in HTTP-only cookies
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, req);
 
     return res.status(200).json({
       success: true,

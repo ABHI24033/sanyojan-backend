@@ -29,7 +29,10 @@ import { initializeSettings } from "./controllers/systemSettingController.js";
 dotenv.config();
 
 const app = express();
+app.locals.blacklist = new Set();
 // connectDB(); // Removed top-level await for Vercel
+
+const normalizeOrigin = (value) => value?.trim().replace(/\/+$/, "");
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
@@ -60,7 +63,7 @@ const corsOptions = {
 
     // Get allowed origins from environment variable
     const allowedOrigins = process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+      ? process.env.FRONTEND_URL.split(',').map(url => normalizeOrigin(url))
       : ["http://localhost:5173"];
 
     // Explicitly add Hostinger domain
@@ -69,7 +72,7 @@ const corsOptions = {
     }
 
     // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(normalizeOrigin(origin)) !== -1) {
       callback(null, true);
     } else if (origin.includes('vercel.app') && origin.startsWith('https://')) {
       // Allow any Vercel domain if FRONTEND_URL is set to a Vercel URL
@@ -105,7 +108,7 @@ app.use(express.urlencoded({ extended: true })); // For form-data support
 app.use(cookieParser());
 
 app.get('/', (req, res) => {
-  res.send('Welcome to family-tree API');
+  res.send('Welcome to NEW Sanyojan API');
 });
 
 // Routes

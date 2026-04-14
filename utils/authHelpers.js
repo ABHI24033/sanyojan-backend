@@ -1,4 +1,42 @@
+import { ACCESS_TOKEN_MAX_AGE_MS, REFRESH_TOKEN_MAX_AGE_MS } from "./tokenGenerate.js";
+
 // Authentication helper functions
+
+const isCrossSiteRequest = (req) => {
+  const origin = req?.headers?.origin;
+  const host = req?.get?.("host");
+
+  if (!origin || !host) {
+    const frontendUrl = process.env.FRONTEND_URL || "";
+    return frontendUrl.startsWith("https://") && !frontendUrl.includes("localhost");
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    const requestProtocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
+    const requestUrl = new URL(`${requestProtocol}://${host}`);
+
+    const sameHostname = originUrl.hostname === requestUrl.hostname;
+    const bothLocalhost =
+      (originUrl.hostname === "localhost" || originUrl.hostname === "127.0.0.1") &&
+      (requestUrl.hostname === "localhost" || requestUrl.hostname === "127.0.0.1");
+
+    return !(sameHostname || bothLocalhost);
+  } catch {
+    return false;
+  }
+};
+
+export const getAuthCookieOptions = (req) => {
+  const useCrossSiteCookies = isCrossSiteRequest(req);
+
+  return {
+    httpOnly: true,
+    secure: useCrossSiteCookies,
+    sameSite: useCrossSiteCookies ? "None" : "Lax",
+    path: "/",
+  };
+};
 
 /**
  * Sets access and refresh tokens in HTTP-only cookies
@@ -6,27 +44,17 @@
  * @param {string} accessToken - JWT access token
  * @param {string} refreshToken - JWT refresh token
  */
-export const setAuthCookies = (res, accessToken, refreshToken) => {
-  // Check if we're in production/Vercel environment
-  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
-
-  // For cross-origin (different domains like Vercel client -> Vercel server), we MUST use "None" with secure: true
-  // For same-origin (localhost -> localhost), we can use "Lax"
-  const sameSiteValue = isProduction ? "None" : "Lax";
-  const secureValue = isProduction; // Must be true when sameSite is "None"
+export const setAuthCookies = (res, accessToken, refreshToken, req) => {
+  const cookieOptions = getAuthCookieOptions(req);
 
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: secureValue,
-    sameSite: sameSiteValue,
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    ...cookieOptions,
+    maxAge: ACCESS_TOKEN_MAX_AGE_MS,
   });
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: secureValue,
-    sameSite: sameSiteValue,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    ...cookieOptions,
+    maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   });
 };
 
@@ -34,21 +62,15 @@ export const setAuthCookies = (res, accessToken, refreshToken) => {
  * Clears authentication cookies
  * @param {Object} res - Express response object
  */
-export const clearAuthCookies = (res) => {
-  const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
-  const sameSiteValue = isProduction ? "None" : "Lax";
-  const secureValue = isProduction;
+export const clearAuthCookies = (res, req) => {
+  const cookieOptions = getAuthCookieOptions(req);
 
   res.clearCookie("accessToken", {
-    httpOnly: true,
-    secure: secureValue,
-    sameSite: sameSiteValue
+    ...cookieOptions
   });
 
   res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: secureValue,
-    sameSite: sameSiteValue
+    ...cookieOptions
   });
 };
 
@@ -125,11 +147,6 @@ export const validateOtp = async (user, otp) => {
       status: 400,
       message: "OTP has expired. Please request a new OTP"
     };
-  }
-
-  if (process.env.NODE_ENV === "development" && otp === "1234") {
-    console.log("[DEV MODE] Bypassing OTP validation with '1234'");
-    return null;
   }
 
   if (user.otp !== otp) {
